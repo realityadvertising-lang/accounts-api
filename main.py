@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from supabase import create_client
+from pydantic import BaseModel
+from typing import Optional
 import os
+from supabase import create_client
 
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -12,9 +15,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+class Account(BaseModel):
+    username: str
+    email: str
+    password: str
+    profile_photo: Optional[str] = None
 
 @app.get("/")
 def home():
@@ -22,10 +31,10 @@ def home():
 
 @app.get("/accounts")
 def get_accounts():
-    data = supabase.table("accounts").select("*").execute()
-    return data.data
+    res = supabase.table("accounts").select("*").execute()
+    return res.data
 
 @app.post("/accounts")
-def create_account(name: str, balance: float = 0):
-    data = supabase.table("accounts").insert({"name": name, "balance": balance}).execute()
-    return data.data
+def create_account(acc: Account):
+    res = supabase.table("accounts").insert(acc.dict()).execute()
+    return res.data
